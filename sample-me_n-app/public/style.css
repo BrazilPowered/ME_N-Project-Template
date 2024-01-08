@@ -1,0 +1,75 @@
+/*
+*
+* ==========================================
+* GENERAL CLASSES
+* ==========================================
+*
+*/
+body {
+	background: #f8f8fd;
+	color: #514B64;
+	min-height: 100vh;
+}
+/*
+*
+* ==========================================
+* MAIN INDEX CLASSES
+* ==========================================
+*
+*/
+.main{
+	padding:20px;
+	font-family: 'Helvetica', serif;
+	box-shadow: 5px 5px 7px 5px #888888;
+	
+}
+.main h1{
+	font-size: 40px;
+	text-align:center;
+	font-family: 'Helvetica', serif;
+	
+}
+input{
+	font-family: 'Helvetica', serif;
+	width: 100%;
+	font-size: 20px;
+	padding: 12px 20px;
+	margin: 8px 0;
+	border: none;
+	border-bottom: 2px solid #767474;
+}
+input[type=submit] {
+	font-family: 'Helvetica', serif;
+	width: 100%;
+	background-color: #767474;
+	border: none;
+	color: white;
+	padding: 16px 32px;
+	margin: 4px 2px;
+	border-radius: 10px;
+}
+/*
+*
+* ==========================================
+* CUSTOM RESULTS CLASSES
+* ==========================================
+*
+*/
+.btn-circle {
+	width: 45px;
+	height: 45px;
+	line-height: 45px;
+	text-align: center;
+	padding: 0;
+	border-radius: 50%;
+}
+.btn-circle i {
+	position: relative;
+	top: -1px;
+}
+.btn-circle-xl {
+	width: 70px;
+	height: 70px;
+	line-height: 70px;
+	font-size: 1.3rem;
+}

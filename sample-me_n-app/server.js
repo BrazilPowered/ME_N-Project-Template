@@ -35,30 +35,6 @@ app.get('/',function(req,res){
     });
   return res.redirect('signup.html');
   });
-
-/*
-app.post('/sign_up', function(req,res){
-  var name = req.body.name;
-  var email =req.body.email;
-  var pass = req.body.password;
-  var phone =req.body.phone;
-
-  var data = {
-    "name": name,
-    "email":email,
-    "password":pass,
-    "phone":phone
-  }
-//  new Entry(data).save();
-	db.collection('details').insert(data,function(err, collection){
-		if (err) throw err;
-		console.log("Record inserted Successfully");
-			
-	});
-    
-  return res.redirect('signup_success.html');
-})
-*/
   
 require("./app/routes")(app);
 
@@ -102,14 +78,15 @@ function configconnectdatabase(db){
     .connect(db.url, {
       family: 4           /*default is IPV6, most dev using ipv4*/
 //      ,dbName: $dbname  /*for debug isolating db overriding connection string fails*/
-/*      ,user: $user     //for debugging login auth when connection string fails//
-      ,pass: $pass     //for debugging login auth when connection string fails*/
+/*      ,user: $user      //for debugging login auth when connection string fails//
+        ,pass: $pass      //for debugging login auth when connection string fails*/
 //      ,authsource: authDBName //set db that stores users when NOT using 'auth' DB
                   //authSource is needed when user for this app is scoped to single db
       ,
     })
     .then(() => {
       console.log("Connected to the database!");
+      //TODO: Validate DB data that is required for app functionality.
     })
     .catch(err => {
       console.log("Cannot connect to the database!", err);

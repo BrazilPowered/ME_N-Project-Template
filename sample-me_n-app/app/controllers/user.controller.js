@@ -3,8 +3,13 @@
  * business logic for the example signup route in this 
  * app.
  *******************************************************/
+//DB imports
 const db = require("../models");
 const User = db.users;
+//Auth imports
+const Role = db.roles;
+const defaultRole = db.ROLES[0];
+const bcrypt = require("bcryptjs");
 
 /****************POST********************
  * Create a new User object & store in DB. 
@@ -12,23 +17,44 @@ const User = db.users;
 exports.create = (req, res) => {
   // Validate request
   if (!req.body.name) {
-    res.status(400).send({ message: "Content can not be empty!" });
-    return;
+    return res.status(400).send({ message: "Content can not be empty!" });
   }
 
   // Create a User
   const user = new User({
     name: req.body.name,
+    username: req.body.username,
     email: req.body.email,
-    password: req.body.password,
+    password: bcrypt.hashSync(req.body.password, 8),
     phone: req.body.phone ? req.body.phone : false
   });
 
   // Save User in the database
   user
     .save(user)
-    .then(data => {
-      res.send(data);
+    .then(user => {
+      //Add Roles for the new user
+      if(req.body.roles){
+        Role.find(
+        {
+          name: { $in: req.body.roles }
+        })
+        .then((roles)=>{
+          user.roles = roles.map(role=>role._id);
+          user.save().then(()=>{
+            res.send({ message: "User was created Successfully!" });
+          })
+        })
+      } else { //default case - set role to default role "user"
+        Role.findOne({ name: defaultRole })
+        .then((role)=>{
+          user.roles= [role._id];
+          user.save()
+          .then(()=>{
+            res.send({ message: "User was created successfully!"});
+          })
+        })
+      }
     })
     .catch(err => {
       res.status(500).send({

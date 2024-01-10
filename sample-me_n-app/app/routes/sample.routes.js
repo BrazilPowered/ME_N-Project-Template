@@ -1,3 +1,8 @@
+/*****************************************************
+ * This routes to all the paths our sample uses to 
+ * showcase navigating between different controller
+ * functionality.
+ *****************************************************/
 module.exports = app => {
   const samples = require("../controllers/sample.controller.js");
 

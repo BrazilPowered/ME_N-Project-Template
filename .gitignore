@@ -73,7 +73,8 @@ web_modules/
 .yarn-integrity
 
 # dotenv environment variable files
-.env
+#.env          #this env file is a sample only; include in repo
+#.env.sample   #this env file is a sample only; include in repo
 .env.development.local
 .env.test.local
 .env.production.local

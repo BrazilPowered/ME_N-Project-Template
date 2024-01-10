@@ -401,7 +401,7 @@ Note that the Authorization middleware layer DOES have a DB connection,
 but only for validating users and their level of access. The connection 
 and "user" written for it to access the DB should be designed thusly.
 
-#### Implementation choices
+##### Implementation package choices
 We're going to use jsonwebtoken and bcryptjs for the authentication and 
 hashing. The package "jsonwebtoken" is a simple package for JWTs, and bcryptjs is a fast javascript-only implementation of bcrypt. 
 (One concern to note: bcrypt only uses the first 72bytes of data when 
@@ -409,10 +409,10 @@ matching passwords -- everything after that is ignored. 72 is still very
 strong, but something to think about in the future.)
 
 
-##### Models
+#### Models Implementation
 The first new code we need to implement for this architecture are the 
 RBAC models for our DB. We will add them to *models/role.model.js*.
-We will also add a "roles" object to the User model schema to 
+We will also add a "roles" object inside a new User model schema to 
 incorporate these authentication changes going forward.
 
 role.model:
@@ -451,5 +451,127 @@ user.model:
 ...
 ```
 These mongoose models will represent the Roles and Users collection as *Normalized* documents in our MongoDB.
-The change to our Users schema will allow an array of Roles objects to be stored with this user, with one or many Roles IDs associated for our Authentication Middleware to refer to (or reference). Associating the roles as separate IDs (rather than denormalizing them and embedding authrization directly in each user record) allows us to keep the data Normalized, or separated into their uniquely managed areas without affecting the referencing documents. We can change roles without updating every user, and visa-versa.
+This Users schema will allow an array of Roles objects to be stored with this user, with one or many Roles IDs associated for our Authentication Middleware to refer to (or reference). Associating the roles as separate IDs (rather than denormalizing them and embedding authrization directly in each user record) allows us to keep the data Normalized, or separated into their uniquely managed areas without affecting the referencing documents. We can change roles without updating every user, and visa-versa.
 
+#### Middleware
+The middleware is used to handle things like validation and logic 
+specific to making Authentication and Authorization work well, but
+not the core logic. We're going to write two pieces which validate 
+our JWT, and makes sure the JWT is/isn't an elevated user (admin or 
+moderator), and also to validate user signup to avoid duplicate
+users and incorrect user roles.
+
+Check the middleware/validateSignup.js and middleware/jwtAuth.js for
+examples.
+
+#### Controllers
+We need to dictate how to control 
+- Authentication: How to know who this user is
+- Authorization: RBAC, or What to let this user do.
+
+##### Authenticate Controller
+We need to allow users to sign up, so we learn who they are,
+and to sign in, so we know who they are among returning users.
+
+Our Sign up process will be a part of the user controller & have to:
+- modify the example user controller to include a default role when not specified
+
+Our Sign-in controller will be part of a new auth controller & have to:
+- verify the username exists in the DB
+- verify the supplied password matches the stored password
+- generate an appropriate JWT
+- Return useful user info and the access token (JWT).
+
+We'll start with a user controller. We'll ensure the code incorporates
+our new roles, and the "user" default role we require.
+
+```js
+...
+//See the controllers/user.controller for the complete controller.
+user.save(user)
+    .then(user => {
+      //Add Roles for the new user
+      if(req.body.roles){
+        Role.find(
+        {
+          name: { $in: req.body.roles }
+        })
+        .then((roles)=>{
+          user.roles = roles.map(role=>role._id);
+          user.save().then(()=>{
+            res.send({ message: "User was created Successfully!" });
+          })
+        })
+      } else { //default case - set role to default role "user"
+        Role.findOne({ name: defaultRole })
+        .then((role)=>{
+          user.roles= [role._id];
+          user.save()
+          .then(()=>{
+            res.send({ message: "User was created successfully!"});
+          })
+        })
+      }
+    })
+...
+```
+
+And we'll need to add a new login/signin function as an auth controller:
+```js
+User.findOne({ username: req.body.username })
+//then fetch all "roles" docs, too; exclude "__v" tag
+.populate("roles","-__v") 
+  .then((user) =>{
+    //check password
+    var passwordIsRight = bcrypt.compareSync(
+      req.body.password, user.password);
+    if (!passwordIsRight){
+      return res.status(401).send({ message: "Invalid Password" });
+    }
+    else{//create JWT
+      const token = jwt.sign({ id: user.id }, authConfig.secret,
+                               {
+                                 algorithm: 'HS256',
+                                 allowInsecureKeySizes: true,
+                                 expiresIn: 86400 //24 hours
+                               });
+      
+      /*******DEBUG Roles assigned to user******/
+      var assignedRoles = [];
+      /** 
+      user.roles.forEach(role => {
+        assignedRoles.push(role.name.toUpperCase() + "_ROLE");
+      });***************************************/
+      res.status(200).send({
+        id:       user._id,
+        username: user.username,
+        email:    user.email,
+        roles:    assignedRoles,
+        accessToken: token
+      });
+    }
+  }
+```
+##### Routes
+In order to use the earlier validations while using the new 
+signup & signin controllers, we now need to modify the routes 
+accordingly:
+```js
+...
+const {validateSignup} = require("../middleware/validateSignup.js")
+
+//Just for this route, we need special headers for the JWT
+app.use(function(req, res, next) {
+  res.header(
+    "Access-Control-Allow-Headers",
+    "x-access-token, Origin, Content-Type, Accept"
+  );
+  next();
+});
+// Create a new User; validate their info & requested roles with middleware
+router.post("/signup",
+            [validateSignup.checkDuplicateUsers
+             validateSignup.validateUserRoles], 
+             user.create);
+
+```

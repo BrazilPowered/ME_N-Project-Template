@@ -8,9 +8,16 @@ module.exports = mongoose => {
   var schema = mongoose.Schema(
     {
       name: String,
-      email: String,
-      password: String,
-      phone: String
+      username: {type: String, required: true},
+      email: {type: String, required: true},
+      password: {type: String, required: true},
+      phone: String,
+      roles: [
+        {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "role"
+        }
+      ]
     },
     { timestamps: true }
   );

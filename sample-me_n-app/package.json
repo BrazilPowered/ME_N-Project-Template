@@ -1,6 +1,6 @@
 {
   "name": "me_n-stack-template",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Node.js RESTful CRUD API in Node.js, with Express & MongoDB",
   "main": "server.js",
   "scripts": {
@@ -19,6 +19,9 @@
     "cors": "^2.8.5",
     "dotenv": "^10.0.0",
     "express": "^4.18.2",
-    "mongoose": "^8.0.3"
+    "mongoose": "^8.0.3",
+    "mongoose-paginate-v2": "^1.8.0",
+    "jsonwebtoken": "^9.0.2",
+    "bcryptjs": "^2.4.3"
   }
 }

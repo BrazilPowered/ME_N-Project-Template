@@ -1,19 +1,20 @@
 /*************************************************
- * This file creates is an index to coordinate all 
+ * This file creates/is an index to coordinate all 
  * routes for the project to a single export to be 
  * imported to server.js
  * 
  * Be sure to include all routes here
- ************************************************/const dbConfig = require("../config/db.config.js");
+ ************************************************/
+const dbConfig = require("../config/db.config.js");
 
- //Our Cohice of Schema framework
+ //Our Choice of Schema framework
 const mongoose = require("mongoose");
 /*mongoose-paginate-v2 Required for paginated.model: */
 const mongoosePaginate = require("mongoose-paginate-v2");
 
 //Enable promise libraries for Mongoose.
 mongoose.Promise = global.Promise;
-//Added below to prepare for change in 7.x defaults
+//Added below to explicitly prepare for change in 7.x defaults
 mongoose.set('strictQuery', false);
 
 const db = {};
@@ -22,5 +23,12 @@ db.url = dbConfig.url;
 db.samples = require("./sample.model.js")(mongoose);
 db.users = require("./user.model.js")(mongoose);
 db.paginateds = require("./paginated.model.js")(mongoose,mongoosePaginate);
+/************ Authentication roles ************/
+db.roles = require("./role.model.js")(mongoose);
+if(true){//TODO: change from TRUE to dev/debug/verify DBs in db.config.js
+    db.ROLES = require("../config/db.initialize.js")(db);
+}else{
+    //TODO:db.ROLES = <import Roles from db ROLES table>
+}
 
 module.exports = db;

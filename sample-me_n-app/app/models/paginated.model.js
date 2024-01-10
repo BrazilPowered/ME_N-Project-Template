@@ -7,7 +7,7 @@
  * 
  * TODO: Validation for object-already-exists
  ************************************************/
-module.exports = mongoose => {
+module.exports = (mongoose,mongoosePaginate) => {
   var schema = mongoose.Schema(
     {
       title: String,
@@ -27,10 +27,13 @@ module.exports = mongoose => {
   schema.plugin(mongoosePaginate);
   const Paginated = mongoose.model("paginated", schema);
 
-  //...and define pagination:
-  //TODO: define reult and error messages.
-  Paginated.paginate(query, options)
+  /**************************
+   * Using pagination:
+   * TODO: define result and error messages.
+   * * * * * * * * *
+  Paginated.paginate(yourQuery, options)
     .then(result => {})
     .catch( err => {});
   return Paginated;
+  ***************************/
 };

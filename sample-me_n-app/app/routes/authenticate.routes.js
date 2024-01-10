@@ -8,9 +8,8 @@
  *****************************************************/
 module.exports = app => {
     var router = require("express").Router();
-    const user = require("../controllers/user.controller.js");
-    const { validateSignup } = require("../middleware")
-  
+    const authenticate = require("../controllers/authenticate.controller.js");
+
     //Just for this route, we need special headers for the JWT
     app.use(function(req, res, next) {
       res.header(
@@ -20,23 +19,9 @@ module.exports = app => {
       next();
     });
 
-    // Create a new User; validate their info & requested roles with middleware
-    router.post("/signup",
-                [validateSignup.checkDuplicateUsers,
-                 validateSignup.validateUserRoles], 
-                 user.create);
-
     //Authenticate a user
-    /* TODO: redirect to auth.controller/router
-    router.post("/login", user.login);
-    */
-
-    // Retrieve a single User with *this* id
-    router.get("/:id", user.findOne);
+    router.post("/login", authenticate.login);
   
-    // Update a User with *this* id
-    router.put("/:id", user.update);
-  
-    app.use("/api/user", router);
+    app.use("/authenticate", router);
   };
   

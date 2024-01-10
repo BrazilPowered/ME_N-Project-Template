@@ -1,3 +1,11 @@
+/*****************************************************
+ * This routes to all the paths our sample uses to 
+ * showcase navigating between different controller
+ * functionality with paginated results.
+ * 
+ * Note that there is no real difference in the router 
+ * when pages are being used.
+ *****************************************************/
 module.exports = app => {
   const paginateds = require("../controllers/paginated.controller.js");
 

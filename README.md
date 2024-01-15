@@ -256,3 +256,9 @@ Mongoose creates our CRUD functions for us:
 - Update an object by id: findByIdAndUpdate(id, data)
 - Delete/Remove an object by id: findByIdAndRemove(id)
 - Delete/Remove all objects: deleteMany()
+
+## Conclusion
+This concludes the simple backend for a MEAN/MERN stack backend before the UI is selected. Other branches of this project include:
+- JWTAuth - Authentication and RBAC Authorization with JWTs
+- MEANwhile - Example with Angular as a Front end
+- MERNsturn - Example with React as a Front end

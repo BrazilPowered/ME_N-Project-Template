@@ -64,7 +64,7 @@ such as:
 
 ... all by using server-side pagination. 
 
-See the Appendix section for the Method: Using Mongoose for Pagination
+See the *Appendix* section for the Method: Using Mongoose for Pagination
 
 ### Access API through routers
 Routes can be found in the app/routes/ directory
@@ -170,7 +170,7 @@ RBAC (Role Based Access Control) also allows us to manage large groups of users 
 
 For an overview of how JWT works in greater detail 
 and how it was implemented in this code, please 
-look to the Appendix section at the bottom for 
+look to the *Appendix* section at the bottom for 
 "A Detailed Overview of JWT"
 
 
@@ -380,6 +380,14 @@ router.post("/signup",
              validateSignup.validateUserRoles], 
              user.create);
 ```
+
+
+
+
+
+
+
+
 
 
 

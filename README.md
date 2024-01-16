@@ -25,6 +25,7 @@ To stop and remove all containers, networks, and all images used by any service 
 ```bash
 docker compose down --rmi all
 ```
+Note that this method removes the mongoDB data; be sure to use a separate volume if you intent to persist that data after an --rmi flag.
 
 ## Modifying and maintaining the project:
 ### Add new packages
@@ -63,109 +64,7 @@ such as:
 
 ... all by using server-side pagination. 
 
-##### Method: Mongoose-pagination v2
-The native MongoDB drivers and Express have great paginiation support built-in, but we're going to take advantage of the pagination offered
-by Mongoose, since we already have it in place for our simple sample
-project's models.
-
-Mongoose-paginate-v2 shows pagination in the client via 
-url parameters, page & size. "Page" dictates which group of items to 
-show at one time, and "size" sets a <limit> on the 
-number of results per page:
-
-- /api/path/samples**?page=1&size=5**
-  - specifies which page to view, and items per page 
-- /api/path/samples**?size=5**
-  - uses the default value for "page" number (0)
-    - Note we always start with page 0, not 1
-- /api/path/samples?title=example&page=1&size=3
-  - paginates to 1st page, shows 3 items per page, & filters on "title"s containing ‘example’
-- /api/path/samples/filterOpt?page=2
-  - paginates (displaying page 2) & filter by ‘filterOpt’ status
-
-And it will return a result response structure like so:
-
-```json
-{
-    "totalItems": 8,
-    "samples": [...],
-    "totalPages": 3,
-    "currentPage": 1
-}
-```
-...where all data can be found inside the "samples" object we named.
-
-##### Mongoose Pagination in controllers
-Note that the examples above showed that the client sends a request 
-with specific page number and size; but the Mongoose controller 
-manages pagination with <limit> and <offset>.
-- <limit> is the same as page "size"
-- <offset> is the page number * pagesize
-- And the first page is always "0"
-
-For example, </api/path/samples**?page=1&size=5**> will get a limit
-of 5, and an offset of 1*5=5, so records 5-9 will be returned.
-
-Since <limit> andf <offset> are set from HTTP parameters, they are
-optional in requests -- we should set default parameters for users to receive when no paging parameters are reveived in our paginated 
-controller. This arrow function takes care of that for us, setting
-the default page size to 10 & giving the first page as defaults:
-
-```js
-const getPagination = (page, size) => {
-  const limit = size ? +size : 10;
-  const offset = page ? page * limit : 0;
-
-  return { limit, offset };
-};
-```
-And then this can be referenced inside each Business Logic function
-to extract the supplied parameters OR provide the defaults when none
-are provided:
-
-```js
-const { limit, offset } = getPagination(page, size);
-```
-View the paginated.controller controller for more examples.
-
-##### Activate Pagination
-To use mongoose's pagination, we have to include it in the mongoose
-schema, both passed to the schema in the exports function, and as
-a schema.plugin:
-```js
-module.exports = (mongoose, mongoosePaginate) => {
-  var schema = mongoose.Schema(...);
-
-  schema.method("toJSON", function() {...});
-
-  schema.plugin(mongoosePaginate);
-
-  const Sample = mongoose.model("sample", schema);
-  return Sample;
-};
-```
-Note: mongoose and MongoosePaginate can be passed here after 
-declaring them as a <const name=require('package')> inside 
-the main models/index.js, and passing them in the <db.schema>
-declaration/require statement thereafter:
-```js /models/index.js
-...
-const mongoose = require("mongoose");
-const mongoosePaginate = require('mongoose-paginate-v2');
-...
-db.samples = require("./sample.model.js")(mongoose, mongoosePaginate);
-module.exports = db;
-```
-
-To access the pages, call the paginate function. Here we show an
-example with custom labels, viewing the 4th page, with only 2 results
-per page:
-```js
-Sample.paginate(condition, { offset: 3, limit: 2, customLabels: myCustomLabels })
-  .then((result) => {
-  });
-```
-View an example with the paginated.model.js model.
+See the *Appendix* section for the Method: Using Mongoose for Pagination
 
 ### Access API through routers
 Routes can be found in the app/routes/ directory
@@ -257,8 +156,125 @@ Mongoose creates our CRUD functions for us:
 - Delete/Remove an object by id: findByIdAndRemove(id)
 - Delete/Remove all objects: deleteMany()
 
-## Conclusion
-This concludes the simple backend for a MEAN/MERN stack backend before the UI is selected. Other branches of this project include:
-- JWTAuth - Authentication and RBAC Authorization with JWTs
-- MEANwhile - Example with Angular as a Front end
-- MERNsturn - Example with React as a Front end
+
+
+
+
+
+
+
+
+
+
+
+
+# Appendix
+
+## Using Mongoose for Pagination
+There are many ways to utilize Pagination. The simpliest is 
+using an offset & page size to find the specific records form the DB we want. This method is done easily in Mongoose with the package
+Mongoose-pagination-v2
+
+### Method: Mongoose-pagination-v2
+The native MongoDB drivers and Express have great paginiation support built-in, but we're going to take advantage of the pagination offered
+by Mongoose, since we already have it in place for our simple sample
+project's models.
+
+Mongoose-paginate-v2 shows pagination in the client via 
+url parameters, page & size. "Page" dictates which group of items to 
+show at one time, and "size" sets a `limit` on the 
+number of results per page:
+
+- /api/path/samples**?page=1&size=5**
+  - specifies which page to view, and items per page 
+- /api/path/samples**?size=5**
+  - uses the default value for "page" number (0)
+    - Note we always start with page 0, not 1
+- /api/path/samples?title=example&page=1&size=3
+  - paginates to 1st page, shows 3 items per page, & filters on "title"s containing ‘example’
+- /api/path/samples/filterOpt?page=2
+  - paginates (displaying page 2) & filter by ‘filterOpt’ status
+
+And it will return a result response structure like so:
+
+```json
+{
+    "totalItems": 8,
+    "samples": [...],
+    "totalPages": 3,
+    "currentPage": 1
+}
+```
+...where all data can be found inside the "samples" object we named.
+
+#### Mongoose Pagination in controllers
+Note that the examples above showed that the client sends a request 
+with specific page number and size; but the Mongoose controller 
+manages pagination with `limit` and `offset`.
+- `limit` is the same as page "size"
+- `offset` is the page number * pagesize
+- And the first page is always "0"
+
+For example, `/api/path/samples**?page=1&size=5**` will get a limit
+of 5, and an offset of 1*5=5, so records 5-9 will be returned.
+
+Since `limit` and `offset` are set from HTTP parameters, they are
+optional in requests -- we should set default parameters for users to receive when no paging parameters are reveived in our paginated 
+controller. This arrow function takes care of that for us, setting
+the default page size to 10 & giving the first page as defaults:
+
+```js
+const getPagination = (page, size) => {
+  const limit = size ? +size : 10;
+  const offset = page ? page * limit : 0;
+
+  return { limit, offset };
+};
+```
+And then this can be referenced inside each Business Logic function
+to extract the supplied parameters OR provide the defaults when none
+are provided:
+
+```js
+const { limit, offset } = getPagination(page, size);
+```
+View the paginated.controller controller for more examples.
+
+#### Activate Pagination in calls
+To use mongoose's pagination, we have to include it in the mongoose
+schema, both passed to the schema in the exports function, and as
+a schema.plugin:
+```js
+module.exports = (mongoose, mongoosePaginate) => {
+  var schema = mongoose.Schema(...);
+
+  schema.method("toJSON", function() {...});
+
+  schema.plugin(mongoosePaginate);
+
+  const Sample = mongoose.model("sample", schema);
+  return Sample;
+};
+```
+Note: mongoose and MongoosePaginate can be passed here after 
+declaring them as a `const name=require('package')` inside 
+the main models/index.js, and passing them in the `db.schema`
+declaration/require statement thereafter:
+```js /models/index.js
+...
+const mongoose = require("mongoose");
+const mongoosePaginate = require('mongoose-paginate-v2');
+...
+db.samples = require("./sample.model.js")(mongoose, mongoosePaginate);
+module.exports = db;
+```
+
+To access the pages, call the paginate function. Here we show an
+example with custom labels, viewing the 4th page, with only 2 results
+per page:
+```js
+Sample.paginate(condition, { offset: 3, limit: 2, customLabels: myCustomLabels })
+  .then((result) => {
+  });
+```
+View an example, find the paginated.model.js file.

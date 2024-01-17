@@ -9,8 +9,6 @@ const dbConfig = require("../config/db.config.js");
 
  //Our Choice of Schema framework
 const mongoose = require("mongoose");
-/*mongoose-paginate-v2 Required for paginated.model: */
-const mongoosePaginate = require("mongoose-paginate-v2");
 
 //Enable promise libraries for Mongoose.
 mongoose.Promise = global.Promise;
@@ -21,6 +19,5 @@ const db = {};
 db.mongoose = mongoose;
 db.url = dbConfig.url;
 db.samples = require("./sample.model.js")(mongoose);
-db.paginateds = require("./paginated.model.js")(mongoose,mongoosePaginate);
 
 module.exports = db;

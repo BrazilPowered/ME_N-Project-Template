@@ -5,5 +5,4 @@
  * *****************************************************/
 module.exports = app => {
     require("./sample.routes")(app);
-    require("./paginated.routes")(app);
 };

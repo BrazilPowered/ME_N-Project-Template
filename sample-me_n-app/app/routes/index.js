@@ -6,7 +6,6 @@
 module.exports = app => {
     require("./sample.routes")(app);
     require("./user.routes")(app);
-    require("./paginated.routes")(app);
     //auth routes
     require("./authenticate.routes")(app);
 };

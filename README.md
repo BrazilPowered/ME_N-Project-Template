@@ -62,7 +62,9 @@ such as:
 - Accessibility for those not running JavaScript
 - Viewing results of complex business logic
 
-... all by using server-side pagination. 
+... all by using server-side pagination.
+
+In this Example, we're going to use Offset-based Paging
 
 See the *Appendix* section for the Method: Using Mongoose for Pagination
 
@@ -170,10 +172,31 @@ Mongoose creates our CRUD functions for us:
 
 # Appendix
 
+## Offset-based Paging
 ## Using Mongoose for Pagination
 There are many ways to utilize Pagination. The simpliest is 
 using an offset & page size to find the specific records form the DB we want. This method is done easily in Mongoose with the package
 Mongoose-pagination-v2
+
+### Benefits
+Paging with an Offset-based approach is quick to code, easy to understand,
+and you see a lot of examples of it online. When your datasets (and thereby
+page numbers) are very small & the updates to that data are very 
+infrequent, this quick and easy way to get started will work for what you 
+need without headaches
+
+### Downsides
+Offset-based pagination has one big flaw: if the results list is changed 
+between calls to the API, the indicies will shift -- this will cause an
+item to appear in the results twice OR be skipped over and never returned
+at all.
+
+For an example, please see [Link text Here](https://www.sitepoint.com/paginating-real-time-data-cursor-based-pagination/)
+
+If this isn't going to be a problem because A. you don't update data 
+often *and* B. your users don't rely on instant availability or total
+accuracy of results in your result list (according to the contraint 
+above), then proceed with abandon!
 
 ### Method: Mongoose-pagination-v2
 The native MongoDB drivers and Express have great paginiation support built-in, but we're going to take advantage of the pagination offered

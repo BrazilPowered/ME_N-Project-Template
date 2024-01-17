@@ -113,11 +113,11 @@ exports.update = (req, res) => {
 exports.delete = (req, res) => {
   const id = req.params.id;
 
-  Sample.findByIdAndRemove(id, { useFindAndModify: false })
+  Sample.findByIdAndDelete(id, { useFindAndModify: false })
     .then(data => {
       if (!data) {
         res.status(404).send({
-          message: `Cannot remove Sample with id ${id}. Sample might not have been found.`
+          message: `Cannot delete Sample with id ${id}. Sample might not have been found.`
         });
       } else {
         res.send({

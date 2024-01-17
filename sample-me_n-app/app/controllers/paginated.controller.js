@@ -135,11 +135,11 @@ exports.update = (req, res) => {
 exports.delete = (req, res) => {
   const id = req.params.id;
 
-  Paginated.findByIdAndRemove(id, { useFindAndModify: false })
+  Paginated.findByIdAndDelete(id, { useFindAndModify: false })
     .then(data => {
       if (!data) {
         res.status(404).send({
-          message: `Cannot remove Paginated object with id ${id}. 
+          message: `Cannot delete Paginated object with id ${id}. 
                     Paginated object might not have been found.`
         });
       } else {

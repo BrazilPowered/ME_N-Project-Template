@@ -9,15 +9,15 @@
 module.exports = app => {
     var router = require("express").Router();
     const user = require("../controllers/user.controller.js");
-    const { validateSignup } = require("../middleware")
+    const { jwtAuth, validateSignup } = require("../middleware")
   
     //Just for this route, we need special headers for the JWT
     app.use(function(req, res, next) {
-      res.header(
-        "Access-Control-Allow-Headers",
-        "x-access-token, Origin, Content-Type, Accept"
-      );
-      next();
+        res.header(
+            "Access-Control-Allow-Headers",
+            "x-access-token, Origin, Content-Type, Accept"
+        );
+        next();
     });
 
     // Create a new User; validate their info & requested roles with middleware
@@ -32,11 +32,16 @@ module.exports = app => {
     */
 
     // Retrieve a single User with *this* id
-    router.get("/:id", user.findOne);
-  
-    // Update a User with *this* id
-    router.put("/:id", user.update);
+    router.get("/:id", [jwtAuth.validateToken,
+                        jwtAuth.isModerator],
+                        user.findOne);
+    
+    //Elevate a User's Credentials by adding additional roles
+    router.put("/elevate",
+                [jwtAuth.validateToken,
+                 jwtAuth.isAdmin],
+                 user.elevate);
   
     app.use("/api/user", router);
-  };
+};
   

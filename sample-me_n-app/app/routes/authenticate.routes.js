@@ -21,6 +21,9 @@ module.exports = app => {
 
     //Authenticate a user
     router.post("/login", authenticate.login);
+
+    //Refresh an access token with a refreshToken
+    router.post("/refreshToken", authenticate.refreshToken);
   
     app.use("/authenticate", router);
   };

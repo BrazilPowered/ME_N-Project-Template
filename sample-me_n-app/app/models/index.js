@@ -28,5 +28,7 @@ if(true){//TODO: change from TRUE to dev/debug/verify DBs in db.config.js
 }else{
     //TODO:db.ROLES = <import Roles from db ROLES table>
 }
+/********Authentication REFRESH TOKEN**********/
+db.refreshToken = require("./refreshToken.model.js")(mongoose)
 
 module.exports = db;

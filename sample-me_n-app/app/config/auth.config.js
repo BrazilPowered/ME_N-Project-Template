@@ -9,7 +9,9 @@
  * make this method redundant going forward (post-Node:20.6)
  **********************************************************/
 const {
-    JWT_SECRET
+    JWT_SECRET,
+    JWT_EXPIRATION_TIME,
+    JWT_REFRESH_EXPIRE_TIME
   } = process.env;
   
   /**********************************
@@ -17,6 +19,8 @@ const {
    * encryption of the JWT Signature.
    **********************************/
   module.exports = {
-    secret: JWT_SECRET
+    secret: JWT_SECRET,
+    jwtExpiration: JWT_EXPIRATION_TIME,
+    jwtRefreshExpiration: JWT_REFRESH_EXPIRE_TIME
 };
   

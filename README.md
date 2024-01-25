@@ -7,6 +7,8 @@ Node is one of the most popular JS web servers.
 Express is one of the most popular web frameworks for Node.
 And Mongoose is a straightforward promise-based ODM useful for small scale apps like this one.
 
+Note, some code may differe slightly from this guide, as small edits are made for compactness or clarity when posted in this doc.
+
 
 ## Start the sample project
 Starting is as easy as one cammand (with docker engine & 
@@ -191,9 +193,13 @@ authenticated user is allowed to do via *roles*.
 3. They are validated by the CORS Middleware
     - They are then rejected by CORS && a response saying so is sent, OR
     - CORS sees this as a valid request and:
-4. The JWT Middleware verifies the JWT
-    - The JWT is invalid and a 403 HTTP response is sent, OR
-    - The JWT is valid, or the refresh token works and:
+4. The JWT Middleware verifies the JWT "Access Token"
+    - The JWT "Access Token" is invalid, and a 403 HTTP response is sent (ending this flow), OR:
+    - The JWT "Access Token" is valid, but expired, then:
+      - a "Refresh Token" is sent; The JWT Middleware verifies the JWT "Refresh Token," and
+          - The "Refresh Token" is invalid or Expired, and a 403 HTTP response is sent (ending this flow), OR
+          - The "Refresh Token" is valid, and a new Access/Refresh Token pair is sent back; the flow continues to step 5 using the new JWT Access Token
+    - OR the JWT "Access Token: was valid, and this proceeds to step 5
 5. The Authorizatio Middleware now processes this JWT user's roles
     - The user does not have any of the roles stored in the Mongo auth DB records, OR
     - The user DOES have an appropriate role so:
@@ -210,12 +216,17 @@ hashing. The package "jsonwebtoken" is a simple package for JWTs, and bcryptjs i
 matching passwords -- everything after that is ignored. 72 is still very 
 strong, but something to think about in the future.)
 
+We will also use the native crypto package to generate effective 
+UUIDs for us via crypto.randomUUID()
+
+
 
 #### Models Implementation
 The first new code we need to implement for this architecture are the 
 RBAC models for our DB. We will add them to *models/role.model.js*.
 We will also add a "roles" object inside a new User model schema to 
 incorporate these authentication changes going forward.
+After, we'll add a separate model for the Refresh Tokens that we'll need to track in our DB.
 
 role.model:
 ```js
@@ -255,6 +266,65 @@ user.model:
 These mongoose models will represent the Roles and Users collection as *Normalized* documents in our MongoDB.
 This Users schema will allow an array of Roles objects to be stored with this user, with one or many Roles IDs associated for our Authentication Middleware to refer to (or reference). Associating the roles as separate IDs (rather than denormalizing them and embedding authrization directly in each user record) allows us to keep the data Normalized, or separated into their uniquely managed areas without affecting the referencing documents. We can change roles without updating every user, and visa-versa.
 
+For the Refresh Tokens, we'll need to create some static methods on the
+schema to autogenerate an appropriate timestamp and verify the validity
+based upon it.
+
+refreshToken.model:
+```js
+...
+  var schema = mongoose.Schema(
+    {
+      token: String,
+      user: {
+        {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "User"
+        }
+      }
+      expiration: Date
+    }
+  );
+  schema.statics.createToken = async function (user) {
+        let expiration = new Date();
+        expiration.setSeconds(expiration.getSeconds() 
+                    + authConfig.jwtRefreshExpiration);
+
+        let _token = crypto.randomUUID();
+        let _object = new this({
+            token: _token,
+            user: user._id,
+            expiration: expiration.getTime(),
+        });
+        let refreshToken = await _object.save();
+        return refreshToken.token;
+    };
+  schema.statics.stillValid = (refreshToken) => {
+        return refreshToken.expiration.getTime() >= new Date().getTime();
+    }
+...
+```
+
+Mongoose "statics" functions are used to operate on the document object's
+class and DB collection, as opposed to "methods" functions which require 
+an object to be instatiated and operated on independently. Since we're 
+creating a token, it makes sense to use a statics function to add this
+new document to the collection, to be operated on later. While checking
+an individual token's expiration, we would use methods.
+
+The createToken method uses the crypto library to create a random unique
+token from a random UUID and save it as an object in our mongoDB.
+The verifyExpiration method returns a comparison of the expiration in 
+the Refresh Token with the current Date-Time for validation.
+
+The last statics function verifies expiration on the token. as a statics 
+function, we can allow flexibility in the call -- We can just look up the 
+token in the DB to get the expiration
+
+
+Never forget to import these in your server, or into the model index.
+
+
 #### Middleware
 The middleware is used to handle things like validation and logic 
 specific to making Authentication and Authorization work well, but
@@ -262,6 +332,9 @@ not the core logic. We're going to write two pieces which validate
 our JWT, and makes sure the JWT is/isn't an elevated user (admin or 
 moderator), and also to validate user signup to avoid duplicate
 users and incorrect user roles.
+We also add a separate Error checking function to capture any token
+expired errors -- this will be used to kick off our Refresh Token
+workflow.
 
 Check the middleware/validateSignup.js and middleware/jwtAuth.js for
 examples.
@@ -291,69 +364,96 @@ our new roles, and the "user" default role we require.
 ...
 //See the controllers/user.controller for the complete controller.
 user.save(user)
-    .then(user => {
-      //Add Roles for the new user
-      if(req.body.roles){
-        Role.find(
-        {
-          name: { $in: req.body.roles }
-        })
-        .then((roles)=>{
-          user.roles = roles.map(role=>role._id);
-          user.save().then(()=>{
-            res.send({ message: "User was created Successfully!" });
-          })
-        })
-      } else { //default case - set role to default role "user"
-        Role.findOne({ name: defaultRole })
-        .then((role)=>{
-          user.roles= [role._id];
-          user.save()
-          .then(()=>{
-            res.send({ message: "User was created successfully!"});
-          })
-        })
-      }
+  .then(user => {
+  //Add Roles for the new user
+  if(req.body.roles){
+    Role.find(
+    {
+      name: { $in: req.body.roles }
     })
+    .then((roles)=>{
+      user.roles = roles.map(role=>role._id);
+      user.save().then(()=>{
+        res.send({ message: "User was created Successfully!" });
+      })
+    })
+  } else { //default case - set role to default role "user"
+    Role.findOne({ name: defaultRole })
+    .then((role)=>{
+      user.roles= [role._id];
+      user.save()
+      .then(()=>{
+        res.send({ message: "User was created successfully!"});
+      })
+    })
+  }
+  })
 ...
 ```
 
 And we'll need to add a new login/signin function as an auth controller:
 ```js
 User.findOne({ username: req.body.username })
-//then fetch all "roles" docs, too; exclude "__v" tag
-.populate("roles","-__v") 
-  .then((user) =>{
-    //check password
+  //fetch all "roles", too; exclude "__v" tag
+  .populate("roles","-__v") 
+...
+  .then((user) => {//check password
     var passwordIsRight = bcrypt.compareSync(
-      req.body.password, user.password);
+      req.body.password, user.password
+    );
     if (!passwordIsRight){
-      return res.status(401).send({ message: "Invalid Password" });
+      return res.status(401).send({ accessToken: null,
+                                    message: "Invalid Password" });
     }
-    else{//create JWT
-      const token = jwt.sign({ id: user.id }, authConfig.secret,
-                               {
-                                 algorithm: 'HS256',
-                                 allowInsecureKeySizes: true,
-                                 expiresIn: 86400 //24 hours
-                               });
-      
-      /*******DEBUG Roles assigned to user******/
+    return user;
+  })//create token & respond to client
+  .then(async (user) => {
+    RefreshToken.createToken(user)
+    .then(({refreshToken,user}) => { //create JWT
+      /*******Roles assigned to user******/
       var assignedRoles = [];
-      /** 
+      ///** 
       user.roles.forEach(role => {
         assignedRoles.push(role.name.toUpperCase() + "_ROLE");
-      });***************************************/
+      });/*************************************/
       res.status(200).send({
         id:       user._id,
         username: user.username,
         email:    user.email,
         roles:    assignedRoles,
-        accessToken: token
+        accessToken: createAccessToken(user.id),
+        refreshToken: refreshToken
       });
-    }
-  }
+    });
+  })
 ```
+
+As seen above, the refresh token is added to the authentication response
+so that clients ccan validate their sessions on the same device without 
+logging in too often. Now we need a controller to handle that token 
+refresh:
+
+```js
+RefreshToken.findOne({ token: userToken })
+    .then((refreshToken)=>{
+        //If yes, Check expiration.
+        if(!RefreshToken.stillValid(refreshToken)){
+          //If not valid, send response "EXPIRED"
+          return res.status(403).json ({ message: "Refresh Token is expired; please sign in again manually."})
+        }
+        else{ //Call or create new token
+          const newAccessToken = createAccessToken(refreshToken.user._id);
+          return res.status(200).json({accessToken: newAccessToken,
+                                       refreshToken: refreshToken.token})
+        }
+    })
+```
+Note how we resend the same refresh token while it's still valid.
+Refresh tokens set a limit on how long a user can refresh their 
+session without needing to enter a username and password. We'll 
+remove the token if it exists but is no longer valid as part of 
+the Token's model.
+
 ##### Routes
 In order to use the earlier validations while using the new 
 signup & signin controllers, we now need to modify the routes 
@@ -377,6 +477,46 @@ router.post("/signup",
              user.create);
 ```
 
+Then signing in and efreshing sessions with refresh tokens 
+needs routhing, too:
+```js
+module.exports = app => {
+    var router = require("express").Router();
+    const authenticate = require("../controllers/authenticate.controller.js");
+
+    //Just for this route, we need special headers for the JWT
+    app.use(function(req, res, next) {
+      res.header(
+        "Access-Control-Allow-Headers",
+        "x-access-token, Origin, Content-Type, Accept"
+      );
+      next();
+    });
+
+    //Authenticate a user
+    router.post("/login", authenticate.login);
+
+    //Refresh an access token with a refreshToken
+    router.post("/refreshToken", authenticate.refreshToken);
+  
+    app.use("/authenticate", router);
+}
+```
+
+### Using this code
+Note that to use this api, roles should always be included in 
+an array of literals (["role1","role2",etc]), and parameters
+are included by express as req.query.\<paramname\> since 
+req.params.\<paramname\> is used for Express to manage 
+dynamic routes in an Express router (eg.: /api/user/***:id***)
+instead.
+
+#### From users' perspective
+The frontend client then needs to be written to manage those 
+tokens accordingly, but the backend is done.
+One example is a "Stay Logged In" opt-in option, at which point
+the client will kick off the refresh token process whenever it
+receives the 401 "Expired" message.
 
 
 
@@ -389,6 +529,7 @@ router.post("/signup",
 
 
 
+---
 # Appendix
 
 ## Detailed Overview of JWT

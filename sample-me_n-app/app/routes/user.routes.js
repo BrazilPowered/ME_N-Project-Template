@@ -34,8 +34,10 @@ module.exports = app => {
     // Retrieve a single User with *this* id
     router.get("/:id", user.findOne);
   
-    // Update a User with *this* id
-    router.put("/:id", user.update);
+    //Elevate a User's Credentials by adding additional roles
+    router.put("/elevate",
+                [jwtAuth.isAdmin],
+                 user.elevate);
   
     app.use("/api/user", router);
   };

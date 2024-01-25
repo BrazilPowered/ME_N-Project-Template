@@ -8,7 +8,7 @@ const db = require("../models");
 const User = db.users;
 //Auth imports
 const Role = db.roles;
-const defaultRole = db.ROLES[0];
+const defaultRole = db.ROLES[db.ROLES.length];
 const bcrypt = require("bcryptjs");
 
 /****************POST********************
@@ -106,28 +106,28 @@ exports.findOne = (req, res) => {
 /*****************PUT********************
  * Update a user by the id in the request
  ****************************************/
-exports.update = (req, res) => {
-  if (!req.body) {
-    return res.status(400).send({
-      message: "Data to update can not be empty!"
-    });
-  }
-
-  const id = req.params.id;
-
-  User.findByIdAndUpdate(id, req.body, { useFindAndModify: false })
-    .then(data => {
-      if (!data) {
-        res.status(404).send({
-          message: `Cannot update User record with id=${id}. Maybe User was not found?`
-        });
-      } else res.send({ message: `User record with id=${id} was updated successfully.` });
+exports.elevate = (req, res) => {
+  const id = req.query.id;
+  //Halt if no Roles or UserID
+  if(!(req.body.roles && id)){
+    res.status(400).send({ message: "Target user roles & id must be included for elevation!" });
+  }else{//Add Roles for the  user
+    Role.find(
+    {
+      name: { $in: req.body.roles }
+    })
+    .then((roles)=>{
+      return User.findByIdAndUpdate(id, {roles: roles.map(role=>role._id)}, { useFindAndModify: false })
+    .then(()=>{
+        res.status(200).send({ message: `User record with id=${id} was updated successfully.` });
+      })
     })
     .catch(err => {
       res.status(500).send({
-        message: "Error updating User record with id=" + id
+        message: `Error updating User record with id=${id}; ${err}` 
       });
     });
+  } 
 };
 
 /***************DELETE*******************

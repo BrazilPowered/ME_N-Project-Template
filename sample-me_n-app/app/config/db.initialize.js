@@ -4,7 +4,7 @@
  * These are used to create:
  * - the initial roles in mongoDB
  **********************************************************/
-const roles = ["user","admin","moderator"];
+const { roles } = require("./db.config");
 /*******************************
  * This should only be run the first time the DB is created.
  * Initializes MongoDB with Data

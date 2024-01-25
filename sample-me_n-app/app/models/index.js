@@ -24,7 +24,7 @@ db.users = require("./user.model.js")(mongoose);
 /************ Authentication roles ************/
 db.roles = require("./role.model.js")(mongoose);
 if(true){//TODO: change from TRUE to dev/debug/verify DBs in db.config.js
-    db.ROLES = require("../config/db.initialize.js")(db);
+    db.ROLES = require("../config/db.config.js").roles;
 }else{
     //TODO:db.ROLES = <import Roles from db ROLES table>
 }

@@ -45,6 +45,7 @@ validateUserRoles = (req, res, next) => {
   if(req.body.roles) {
     req.body.roles.forEach(role => {
       if(!ROLES.includes(role)){
+        //TODO: AND if role == admin|Moderator, deny unless requested by admin|Moderator
         res.status(400).send({
           message: "Error! Role "+role+" does not exist!"
         });

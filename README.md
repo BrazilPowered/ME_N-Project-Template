@@ -7,6 +7,8 @@ Node is one of the most popular JS web servers.
 Express is one of the most popular web frameworks for Node.
 And Mongoose is a straightforward promise-based ODM useful for small scale apps like this one.
 
+Note, some code may differe slightly from this guide, as small edits are made for compactness or clarity when posted in this doc.
+
 
 ## Start the sample project
 Starting is as easy as one cammand (with docker engine & 
@@ -377,6 +379,20 @@ router.post("/signup",
              user.create);
 ```
 
+### Using this code
+Note that to use this api, roles should always be included in 
+an array of literals (["role1","role2",etc]), and parameters
+are included by express as req.query.\<paramname\> since 
+req.params.\<paramname\> is used for Express to manage 
+dynamic routes in an Express router (eg.: /api/user/***:id***)
+instead.
+
+#### From users' perspective
+The frontend client then needs to be written to manage those 
+tokens accordingly, but the backend is done.
+One example is a "Stay Logged In" opt-in option, at which point
+the client will kick off the refresh token process whenever it
+receives the 401 "Expired" message.
 
 
 
@@ -386,9 +402,7 @@ router.post("/signup",
 
 
 
-
-
-
+---
 # Appendix
 
 ## Detailed Overview of JWT

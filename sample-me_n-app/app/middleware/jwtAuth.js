@@ -36,75 +36,84 @@ validateToken = (req, res, next) => {
  * Checks if user has specific role 
  * access by name of the role
  * 
- * TODO: write isRoleByName() to reduce 
- * code duplication in isAdmin and isModerator
+ * NOTE: Req.userId only exists when 
+ * validateToken was first run to get an
+ * accurate userId to check below
  ****************************************/
 /****************************************
  * Checks if user is a Moderator by role
+ * Set name of Moderator role in db.ROLES,
+ * sorted by priority.
+ * MUST be used by jwtAuth.validateToken
+ * first.
  ****************************************/
 isModerator = (req, res, next) => {
-  User.findById(req.userId).exec((err, user) => {
-    if (err) {
-      res.status(500).send({ message: err });
-      return;
-    }
-
-    Role.find(
-      {
-        _id: { $in: user.roles }
-      },
-      (err, roles) => {
-        if (err) {
-          res.status(500).send({ message: err });
-          return;
-        }
-
-        for (let i = 0; i < roles.length; i++) {
-          if (roles[i].name === "moderator") {
-            next();
-            return;
-          }
-        }
-
-        res.status(403).send({ message: "Require Moderator Role Priviliges!" });
-        return;
+  roleName=db.ROLES[1];
+  hasRole(req.userId,roleName)
+  .then((admittance)=>{
+      if(admittance === false){
+          //admins are also Moderators, so check that role, too
+          return hasRole(req.userId,db.ROLES[0])
+      }else{
+          //if no matching role, send 403 error
+          next();
       }
-    );
-  });
+  })
+  .then((admittance) => {
+      if(admittance === true){
+          next();
+      }else{
+          //if no matching role, send 403 error
+          res.status(403).send({ message: "Requires \""+roleName+"\" Role Privileges!" });
+      }
+  })
+  .catch(err=>{
+      //errors would be returned as non 'true' or 'false' values
+      res.status(500).send({ message: err });
+  })
 };
 
 /****************************************
- * Checks if user is an Admin by role
+ * Checks if user is an Admin by role.
+ * Set name of admin role in db.ROLES,
+ * sorted by priority.
+ * MUST be used by jwtAuth.validateToken
+ * first.
  ****************************************/
 isAdmin = (req, res, next) => {
-  User.findById(req.userId).exec((err, user) => {
-    if (err) {
-      res.status(500).send({ message: err });
-      return;
-    }
- 
-    Role.find(
-      {
-        _id: { $in: user.roles }
-      },
-      (err, roles) => {
-        if (err) {
-          res.status(500).send({ message: err });
-          return;
-        }
-
-        for (let i = 0; i < roles.length; i++) {
-          if (roles[i].name === "admin") {
+    roleName=db.ROLES[0];
+    hasRole(req.userId,roleName)
+    .then((admittance)=>{
+        if(admittance === true){
             next();
-            return;
-          }
+        }else{
+            //if no matching role, send 403 error
+            res.status(403).send({ message: "Requires \""+roleName+"\" Role Privileges!" });
         }
+    }).catch(err=>{
+        //errors would be returned as non 'true' or 'false' values
+        res.status(500).send({ message: err });
+    })
+};
 
-        res.status(403).send({ message: "Requires Admin Role Privileges!" });
-        return;
-      }
-    );
-  });
+/********************************************
+ * Checks if user has a role by [String] roleName
+ ********************************************/
+hasRole = (userId, roleName) => {
+    return User.findById(userId)
+    .then((user) => {
+        return Role.find({ _id: { $in: user.roles } })
+    })
+    .then((roles) => {
+        for (let i = 0; i < roles.length; i++) {
+            if (roles[i].name === roleName) {
+                return true;
+            }
+        }
+        return false;
+    }).catch((err=>{
+        return err;
+    }))
 };
 
 //configure methods to export

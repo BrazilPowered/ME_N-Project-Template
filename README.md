@@ -273,53 +273,65 @@ based upon it.
 refreshToken.model:
 ```js
 ...
-  var schema = mongoose.Schema(
-    {
-      token: String,
-      user: {
-        {
-          type: mongoose.Schema.Types.ObjectId,
-          ref: "User"
-        }
-      }
-      expiration: Date
+var schema = new mongoose.Schema({
+    token: String,
+    user: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User",
+    },
+    expiration: { 
+        type: Date, 
+        index: {expireAfterSeconds: 0}//Mongo now Auto-removes this token when 'expiration' is < current time in seconds
     }
-  );
-  schema.statics.createToken = async function (user) {
-        let expiration = new Date();
-        expiration.setSeconds(expiration.getSeconds() 
-                    + authConfig.jwtRefreshExpiration);
+});
+schema.statics.createToken = async function (user) {
+    let expiration = new Date();
+    expiration.setSeconds(
+        expiration.getSeconds() + authConfig.jwtRefreshExpiration
+    );
+    let _token = crypto.randomUUID();
+    let _object = new this({
+        token: _token,
+        user: user._id,
+        expiration: expiration.getTime(),
+    });
+    let refreshToken = await _object.save();
+    return refreshToken.token;
+};
+schema.methods.stillValid = function stillValid() {
+    return valid = this.expiration.getTime() >= new Date().getTime();
+}//Note: this is handled by the "expireAfterSeconds" index option, but there may be time between index auto-removal and expiration time
 
-        let _token = crypto.randomUUID();
-        let _object = new this({
-            token: _token,
-            user: user._id,
-            expiration: expiration.getTime(),
-        });
-        let refreshToken = await _object.save();
-        return refreshToken.token;
-    };
-  schema.statics.stillValid = (refreshToken) => {
-        return refreshToken.expiration.getTime() >= new Date().getTime();
-    }
 ...
 ```
 
+Note the index set up on "exipration." The option "expireAfterSeconds"
+allows mongoDB to periodically remove these tokens when the expiration 
+time passes. This might not happen at the immediate time of expiration, 
+so any check of a refreshToken document can't rely solely on a token's 
+existence to verify validity; the actual expiration must be verified, 
+too. 
+
+Next, it's important to note the two functions included in this model.
 Mongoose "statics" functions are used to operate on the document object's
 class and DB collection, as opposed to "methods" functions which require 
 an object to be instatiated and operated on independently. Since we're 
-creating a token, it makes sense to use a statics function to add this
-new document to the collection, to be operated on later. While checking
-an individual token's expiration, we would use methods.
+creating a token, it makes sense to use a *statics* function to add this
+new document to the collection, to be operated on later. Conversely, 
+while checking an individual token's expiration is *stillValid* (eg. 
+acting on a refreshToken Object), we would use Mongoose *methods*, as 
+shown here.
 
-The createToken method uses the crypto library to create a random unique
-token from a random UUID and save it as an object in our mongoDB.
-The verifyExpiration method returns a comparison of the expiration in 
-the Refresh Token with the current Date-Time for validation.
+The createToken *statics* function uses the crypto library to create a 
+random unique token from a random UUID and save it as an object in our 
+mongoDB. The verifyExpiration method returns a comparison of the 
+expiration in the Refresh Token with the current Date-Time for 
+validation.
 
-The last statics function verifies expiration on the token. as a statics 
-function, we can allow flexibility in the call -- We can just look up the 
-token in the DB to get the expiration
+The stillValid *methods* function verifies expiration on the token. as 
+a *methods* function, it stands out that this expects to compare the
+actual expiration of a single token, and therfore will only function
+on an existing instantiated refreshToken object.
 
 
 Never forget to import these in your server, or into the model index.
@@ -450,9 +462,9 @@ RefreshToken.findOne({ token: userToken })
 ```
 Note how we resend the same refresh token while it's still valid.
 Refresh tokens set a limit on how long a user can refresh their 
-session without needing to enter a username and password. We'll 
-remove the token if it exists but is no longer valid as part of 
-the Token's model.
+session without needing to enter a username and password. The 
+tokens are setup to autoremove by mongoDB when they expire via 
+the model.
 
 ##### Routes
 In order to use the earlier validations while using the new 
